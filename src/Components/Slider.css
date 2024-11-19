@@ -1,0 +1,13 @@
+/* Slider.css */
+/* Slider.css */
+.shift-up {
+  margin-top: -30px;; /* Adjust the value as needed */
+}  
+  /*npm install
+  npm install -D tailwindcss
+  npx tailwindcss init 
+  npm install react-transition-group
+  tailwind config.js  
+  tailwind.css
+ npm start
+  */
