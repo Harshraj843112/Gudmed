@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json for better caching
 COPY package*.json ./
 
-# Install dependencies using npm ci for faster and deterministic builds
-RUN npm ci
+# Install dependencies using npm install (temporary workaround)
+RUN npm install
 
 # Copy the rest of the application files
 COPY . .
@@ -28,5 +28,5 @@ COPY --from=build /app/build /app/build
 # Expose port 3000
 EXPOSE 3000
 
-# Start the app using "serve "
+# Start the app using "serve"
 CMD ["serve", "-s", "build", "-l", "3000"]
