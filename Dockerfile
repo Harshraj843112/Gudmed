@@ -28,5 +28,5 @@ COPY --from=build /app/build /app/build
 # Expose port 3000
 EXPOSE 3000
 
-# Start the app using "serve"
+# Start the app using "serve "
 CMD ["serve", "-s", "build", "-l", "3000"]
