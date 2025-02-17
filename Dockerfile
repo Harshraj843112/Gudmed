@@ -11,8 +11,8 @@ RUN npm install
 # Copy the rest of the application files
 COPY . .
 
-# Build the React app
-RUN npm run build
+# Build the React app with increased memory allocation
+RUN npm run build -- --max-old-space-size=4096
 
 # Step 2: Serve the app using Node.js
 FROM node:21
