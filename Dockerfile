@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies using npm ci for faster and deterministic builds
+RUN npm ci
 
 # Copy the rest of the application files
 COPY . .
