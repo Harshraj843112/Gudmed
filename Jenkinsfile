@@ -1,9 +1,9 @@
 pipeline {
     agent { label "vinod" }
- 
+
     environment {
-      NGINX_HOST=44.206.233.53
-        NGINX_USER=ubuntu
+        NGINX_HOST = "44.206.233.53"  // Enclose the IP address in double quotes
+        NGINX_USER = "ubuntu"         // Enclose the username in double quotes
         DOCKER_IMAGE = "notes-app:latest"
     }
 
