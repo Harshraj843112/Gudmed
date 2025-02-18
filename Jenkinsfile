@@ -2,8 +2,8 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        EC2_HOST = "ec2-44-206-233-53.compute-1.amazonaws.com"
-        EC2_USER = "ubuntu"
+        NGINX_HOST = "your-nginx-server-ip-or-hostname"  // Replace with your Nginx server IP or hostname
+        NGINX_USER = "your-nginx-server-user"            // Replace with the user for the Nginx server
         DOCKER_IMAGE = "notes-app:latest"
     }
 
@@ -37,12 +37,12 @@ pipeline {
             }
         }
 
-        stage("Deploy to EC2") {
+        stage("Deploy to Nginx Server") {
             steps {
-                echo "Deploying on EC2 server"
-                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
+                echo "Deploying on Nginx server"
+                withCredentials([sshUserPrivateKey(credentialsId: 'nginx-server-key', keyFileVariable: 'NGINX_KEY')]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i $EC2_KEY $EC2_USER@$EC2_HOST << 'EOF'
+                        ssh -o StrictHostKeyChecking=no -i $NGINX_KEY $NGINX_USER@$NGINX_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
                             docker login -u $DOCKER_USER -p $DOCKER_PASS
                             docker pull $DOCKER_USER/$DOCKER_IMAGE
