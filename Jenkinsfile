@@ -40,7 +40,10 @@ pipeline {
         stage("Deploy to EC2") {
             steps {
                 echo "Deploying on EC2 server"
-                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
+                withCredentials([
+                    usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                    sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')
+                ]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no -i $EC2_KEY $EC2_USER@$EC2_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
