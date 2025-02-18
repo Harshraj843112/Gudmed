@@ -1,4 +1,4 @@
-# Step 1: Build t he React app 
+# Step 1: Build t he React app  
 FROM node:21 AS build
 WORKDIR /app
 
