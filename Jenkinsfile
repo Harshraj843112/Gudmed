@@ -30,7 +30,7 @@ pipeline {
         stage("Push to DockerHub") {
             steps {
                 echo "Pushing image to Docker Hub"
-                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS']) {
                     sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE
@@ -43,7 +43,10 @@ pipeline {
         stage("Deploy to Nginx Server") {
             steps {
                 echo "Deploying on Nginx server"
-                withCredentials([sshUserPrivateKey(credentialsId: 'nginx-server-key', keyFileVariable: 'NGINX_KEY')]) {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'nginx-server-key', keyFileVariable: 'NGINX_KEY'),
+                    usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
                     sh """
                         set -e  # Stop the script if any command fails
                         ssh -o StrictHostKeyChecking=no -i $NGINX_KEY $NGINX_USER@$NGINX_HOST << 'EOF'
