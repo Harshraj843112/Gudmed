@@ -1,6 +1,6 @@
 pipeline {
     agent { label "vinod" }
-
+ 
     environment {
       NGINX_HOST=44.206.233.53
         NGINX_USER=ubuntu
