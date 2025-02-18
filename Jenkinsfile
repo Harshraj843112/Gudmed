@@ -1,11 +1,10 @@
 pipeline {
-    agent { label "vinod" }  // Use the appropriate label for Jenkins Slave, or leave it as 'master' for Jenkins Master
+    agent { label "vinod" }
 
     environment {
+        EC2_HOST = "ec2-44-206-233-53.compute-1.amazonaws.com"
+        EC2_USER = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
-        DOCKER_REGISTRY = "docker.io"  // Docker Hub
-        DOCKER_USER = credentials('dockerHubCredentails').username  // Fetch username from credentials
-        DOCKER_PASS = credentials('dockerHubCredentails').password  // Fetch password from credentials
     }
 
     stages {
@@ -30,58 +29,33 @@ pipeline {
         stage("Push to DockerHub") {
             steps {
                 echo "Pushing image to Docker Hub"
-                script {
-                    // Docker login and push
-                    withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh """
-                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                            docker tag $DOCKER_IMAGE \$DOCKER_USER/\$DOCKER_IMAGE
-                            docker push \$DOCKER_USER/\$DOCKER_IMAGE
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    sh "docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE"
+                    sh "docker push $DOCKER_USER/$DOCKER_IMAGE"
                 }
             }
         }
 
-        stage("Deploy on Jenkins") {
+        stage("Deploy to EC2") {
             steps {
-                echo "Deploying on Jenkins server (local)"
-                script {
-                    // Pull the latest Docker image and run it on Jenkins server (Master/Slave)
-                    try {
-                        sh """
-                            echo "Logging into Docker"
-                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-
+                echo "Deploying on EC2 server"
+                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i $EC2_KEY $EC2_USER@$EC2_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
-                            docker pull \$DOCKER_USER/\$DOCKER_IMAGE
+                            docker login -u $DOCKER_USER -p $DOCKER_PASS
+                            docker pull $DOCKER_USER/$DOCKER_IMAGE
                             
                             echo "Stopping and removing old container (if exists)"
                             docker rm -f notes-app || true
                             
                             echo "Starting new container"
-                            docker run -d -p 8000:8000 --name notes-app \$DOCKER_USER/\$DOCKER_IMAGE
-                        """
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                        echo "Error during Docker deployment: ${e.message}"
-                        throw e  // rethrow the error to mark the pipeline as failed
-                    }
+                            docker run -d -p 8000:8000 --name notes-app $DOCKER_USER/$DOCKER_IMAGE
+                        EOF
+                    """
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo "Cleaning up the environment after the build"
-            // You can add cleanup commands here if necessary
-        }
-        success {
-            echo "Deployment succeeded!"
-        }
-        failure {
-            echo "Deployment failed!"
         }
     }
 }
