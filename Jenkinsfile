@@ -45,7 +45,7 @@ pipeline {
                     sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')
                 ]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i $EC2_KEY $EC2_USER@$EC2_HOST << 'EOF'
+                        ssh -o StrictHostKeyChecking=no -i "\${EC2_KEY}" $EC2_USER@$EC2_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
                             docker login -u $DOCKER_USER -p $DOCKER_PASS
                             docker pull $DOCKER_USER/$DOCKER_IMAGE
