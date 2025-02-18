@@ -2,8 +2,8 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        NGINX_HOST = "your-nginx-server-ip-or-hostname"  // Replace with your Nginx server IP or hostname
-        NGINX_USER = "your-nginx-server-user"            // Replace with the user for the Nginx server
+      NGINX_HOST=44.206.233.53
+        NGINX_USER=ubuntu
         DOCKER_IMAGE = "notes-app:latest"
     }
 
