@@ -3,6 +3,9 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "notes-app:latest"
+        DOCKER_REGISTRY = "docker.io"  // Docker Hub
+        DOCKER_USER = credentials('dockerHubCredentails').username  // Fetch username from credentials
+        DOCKER_PASS = credentials('dockerHubCredentails').password  // Fetch password from credentials
     }
 
     stages {
@@ -27,10 +30,15 @@ pipeline {
         stage("Push to DockerHub") {
             steps {
                 echo "Pushing image to Docker Hub"
-                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-                    sh "docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE"
-                    sh "docker push $DOCKER_USER/$DOCKER_IMAGE"
+                script {
+                    // Docker login and push
+                    withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                            docker tag $DOCKER_IMAGE \$DOCKER_USER/\$DOCKER_IMAGE
+                            docker push \$DOCKER_USER/\$DOCKER_IMAGE
+                        """
+                    }
                 }
             }
         }
@@ -40,18 +48,40 @@ pipeline {
                 echo "Deploying on Jenkins server (local)"
                 script {
                     // Pull the latest Docker image and run it on Jenkins server (Master/Slave)
-                    sh """
-                        docker login -u $DOCKER_USER -p $DOCKER_PASS
-                        docker pull $DOCKER_USER/$DOCKER_IMAGE
-                        
-                        echo "Stopping and removing old container (if exists)"
-                        docker rm -f notes-app || true
-                        
-                        echo "Starting new container"
-                        docker run -d -p 8000:8000 --name notes-app $DOCKER_USER/$DOCKER_IMAGE
-                    """
+                    try {
+                        sh """
+                            echo "Logging into Docker"
+                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+
+                            echo "Pulling the latest image from Docker Hub"
+                            docker pull \$DOCKER_USER/\$DOCKER_IMAGE
+                            
+                            echo "Stopping and removing old container (if exists)"
+                            docker rm -f notes-app || true
+                            
+                            echo "Starting new container"
+                            docker run -d -p 8000:8000 --name notes-app \$DOCKER_USER/\$DOCKER_IMAGE
+                        """
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        echo "Error during Docker deployment: ${e.message}"
+                        throw e  // rethrow the error to mark the pipeline as failed
+                    }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Cleaning up the environment after the build"
+            // You can add cleanup commands here if necessary
+        }
+        success {
+            echo "Deployment succeeded!"
+        }
+        failure {
+            echo "Deployment failed!"
         }
     }
 }
