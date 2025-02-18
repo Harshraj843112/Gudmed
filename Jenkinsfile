@@ -1,9 +1,7 @@
 pipeline {
-    agent { label "vinod" }
+    agent { label "vinod" }  // Use the appropriate label for Jenkins Slave, or leave it as 'master' for Jenkins Master
 
     environment {
-        EC2_HOST = "ec2-44-206-233-53.compute-1.amazonaws.com"
-        EC2_USER = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
     }
 
@@ -37,25 +35,20 @@ pipeline {
             }
         }
 
-        stage("Deploy to EC2") {
+        stage("Deploy on Jenkins") {
             steps {
-                echo "Deploying on EC2 server"
-                withCredentials([
-                    usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                    sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')
-                ]) {
+                echo "Deploying on Jenkins server (local)"
+                script {
+                    // Pull the latest Docker image and run it on Jenkins server (Master/Slave)
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i "\${EC2_KEY}" $EC2_USER@$EC2_HOST << 'EOF'
-                            echo "Pulling the latest image from Docker Hub"
-                            docker login -u $DOCKER_USER -p $DOCKER_PASS
-                            docker pull $DOCKER_USER/$DOCKER_IMAGE
-                            
-                            echo "Stopping and removing old container (if exists)"
-                            docker rm -f notes-app || true
-                            
-                            echo "Starting new container"
-                            docker run -d -p 8000:8000 --name notes-app $DOCKER_USER/$DOCKER_IMAGE
-                        EOF
+                        docker login -u $DOCKER_USER -p $DOCKER_PASS
+                        docker pull $DOCKER_USER/$DOCKER_IMAGE
+                        
+                        echo "Stopping and removing old container (if exists)"
+                        docker rm -f notes-app || true
+                        
+                        echo "Starting new container"
+                        docker run -d -p 8000:8000 --name notes-app $DOCKER_USER/$DOCKER_IMAGE
                     """
                 }
             }
