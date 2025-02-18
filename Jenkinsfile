@@ -4,7 +4,7 @@ pipeline {
     environment {
         NGINX_HOST = '44.206.233.53'  // IP address for Nginx server
         NGINX_USER = 'ubuntu'         // Username for Nginx server
-        DOCKER_IMAGE = 'notes-app:latest'  // Docker image name
+        DOCKER_IMAGE = 'notes-app:latest'  // Docker image name 
         DOCKER_USER = '20scse1010239'  // Your DockerHub username
     }
 
