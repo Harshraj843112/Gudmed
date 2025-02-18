@@ -2,9 +2,9 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        NGINX_HOST = "44.206.233.53"  // Enclose the IP address in double quotes
-        NGINX_USER = "ubuntu"         // Enclose the username in double quotes
-        DOCKER_IMAGE = "notes-app:latest"
+        NGINX_HOST = '44.206.233.53' // Enclose the IP address in single quotes
+        NGINX_USER = 'ubuntu'        // Enclose the username in single quotes
+        DOCKER_IMAGE = 'notes-app:latest'
     }
 
     stages {
@@ -30,9 +30,11 @@ pipeline {
             steps {
                 echo "Pushing image to Docker Hub"
                 withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-                    sh "docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE"
-                    sh "docker push $DOCKER_USER/$DOCKER_IMAGE"
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE
+                        docker push $DOCKER_USER/$DOCKER_IMAGE
+                    """
                 }
             }
         }
@@ -42,6 +44,7 @@ pipeline {
                 echo "Deploying on Nginx server"
                 withCredentials([sshUserPrivateKey(credentialsId: 'nginx-server-key', keyFileVariable: 'NGINX_KEY')]) {
                     sh """
+                        set -e  # Stop the script if any command fails
                         ssh -o StrictHostKeyChecking=no -i $NGINX_KEY $NGINX_USER@$NGINX_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
                             docker login -u $DOCKER_USER -p $DOCKER_PASS
