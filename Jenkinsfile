@@ -2,10 +2,10 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        NGINX_HOST = '44.206.233.53'  // IP address for Nginx server
-        NGINX_USER = 'ubuntu'         // Username for Nginx server
-        DOCKER_IMAGE = 'notes-app:latest'  // Docker image name
-        DOCKER_USER = '20scse1010239'  // Your DockerHub username
+        // The EC2_HOST should be the public DNS or IP of your target EC2 instance.
+        EC2_HOST = "ec2-98-81-222-114.compute-1.amazonaws.com"
+        EC2_USER = "ubuntu"
+        DOCKER_IMAGE = "notes-app:latest"
     }
 
     stages {
@@ -30,36 +30,44 @@ pipeline {
         stage("Push to DockerHub") {
             steps {
                 echo "Pushing image to Docker Hub"
+                // Use the dockerHubCredentails stored in Jenkins.
                 withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
+                    sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE
                         docker push $DOCKER_USER/$DOCKER_IMAGE
-                    """
+                    '''
                 }
             }
         }
-
-        stage("Deploy to Nginx Server") {
+        
+        // This stage checks the EC2_KEY variable and its file details.
+        stage("Check EC2_KEY") {
             steps {
-                echo "Deploying on Nginx server"
-                withCredentials([ 
-                    sshUserPrivateKey(credentialsId: 'nginx-server-key', keyFileVariable: 'NGINX_KEY'),
-                    usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-                ]) {
+                echo "Checking EC2_KEY variable and file path..."
+                // Print the value of EC2_KEY (this will show the full temporary file path)
+                sh 'echo "EC2_KEY is: $EC2_KEY"'
+                // List the details of the key file to verify its existence and permissions.
+                sh 'ls -l "$EC2_KEY"'
+            }
+        }
+
+        stage("Deploy to EC2") {
+            steps {
+                echo "Deploying on EC2 server"
+                // Use your SSH private key credential (e.g., 'ubuntu-ki-key1')
+                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
                     sh """
-                        set -e  # Stop the script if any command fails
-                        # Use the Jenkins-provided $NGINX_KEY directly
-                        ssh -o StrictHostKeyChecking=no -i $NGINX_KEY $NGINX_USER@$NGINX_HOST << 'EOF'
+                        ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" \$EC2_USER@\$EC2_HOST << 'EOF'
                             echo "Pulling the latest image from Docker Hub"
-                            docker login -u $DOCKER_USER -p $DOCKER_PASS
-                            docker pull $DOCKER_USER/$DOCKER_IMAGE
+                            docker login -u \$DOCKER_USER -p \$DOCKER_PASS
+                            docker pull \$DOCKER_USER/\$DOCKER_IMAGE
                             
                             echo "Stopping and removing old container (if exists)"
                             docker rm -f notes-app || true
                             
                             echo "Starting new container"
-                            docker run -d -p 8000:8000 --name notes-app $DOCKER_USER/$DOCKER_IMAGE
+                            docker run -d -p 8000:8000 --name notes-app \$DOCKER_USER/\$DOCKER_IMAGE
                         EOF
                     """
                 }
