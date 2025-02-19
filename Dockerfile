@@ -1,20 +1,21 @@
-# Use latest stable Node.js version
-FROM node:20 
+# Step 1: Build the React app
+FROM node:20 AS build
+WORKDIR /app
 
-# Set working directory 
-WORKDIR /app/
-
-# Copy package.json first to cache dependencies
+# Copy dependencies first (for caching)
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy remaining files
-COPY . . 
+# Copy source code and build
+COPY . .
+RUN npm run build
 
-# Expose port 3000
-EXPOSE 3000
+# Step 2: Serve the built files using Nginx
+FROM nginx:latest
+COPY --from=build /app/build /usr/share/nginx/html
 
-# Start the app
-CMD ["npm", "start"]
+# Expose port 80 for HTTP traffic
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
