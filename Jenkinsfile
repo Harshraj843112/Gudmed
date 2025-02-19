@@ -23,7 +23,10 @@ pipeline {
             steps {
                 echo "Building Docker image..."
                 dir('devops') {  
-                    sh "docker build -t ${DOCKER_IMAGE} ."
+                    sh '''
+                        export DOCKER_BUILDKIT=1
+                        docker build --build-arg NODE_OPTIONS="--max-old-space-size=4096" -t ${DOCKER_IMAGE} .
+                    '''
                 }
             }
         }
