@@ -2,9 +2,9 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        //  Public DNS or IP of the EC2 instance
-        EC2_HOST = "ec2-98-81-222-114.compute-1.amazonaws.com"
-        EC2_USER = "ubuntu"
+        // Public DNS or IP of the EC2 instance
+        EC2_HOST    = "ec2-98-81-222-114.compute-1.amazonaws.com"
+        EC2_USER    = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
     }
 
@@ -22,7 +22,7 @@ pipeline {
             steps {
                 echo "Building Docker image..."
                 dir('devops') {  
-                    sh "docker build -t $DOCKER_IMAGE ."
+                    sh "docker build -t ${DOCKER_IMAGE} ."
                 }
             }
         }
@@ -61,19 +61,19 @@ pipeline {
                     usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
                 ]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" $EC2_USER@$EC2_HOST << 'EOF'
-                        echo "Logging into Docker Hub..."
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        ssh -o StrictHostKeyChecking=no -i "\$EC2_KEY" \$EC2_USER@\$EC2_HOST <<EOF
+echo "Logging into Docker Hub..."
+echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
 
-                        echo "Pulling the latest image..."
-                        docker pull "$DOCKER_USER/$DOCKER_IMAGE"
+echo "Pulling the latest image..."
+docker pull "\$DOCKER_USER/\$DOCKER_IMAGE"
 
-                        echo "Stopping and removing old container..."
-                        docker rm -f notes-app || true
+echo "Stopping and removing old container..."
+docker rm -f notes-app || true
 
-                        echo "Running new container..."
-                        docker run -d -p 8000:8000 --name notes-app --restart always "$DOCKER_USER/$DOCKER_IMAGE"
-                        EOF
+echo "Running new container..."
+docker run -d -p 8000:8000 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
+EOF
                     """
                 }
             }
