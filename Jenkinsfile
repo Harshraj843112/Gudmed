@@ -2,7 +2,7 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        // Public DNS or IP of the EC2 instance
+        //  Public DNS or IP of the EC2 instance
         EC2_HOST = "ec2-98-81-222-114.compute-1.amazonaws.com"
         EC2_USER = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
