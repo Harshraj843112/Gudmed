@@ -1,7 +1,7 @@
 # Use latest stable Node.js version
 FROM node:20 
 
-# Set working directory
+# Set working directory 
 WORKDIR /app/
 
 # Copy package.json first to cache dependencies
