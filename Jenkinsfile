@@ -2,7 +2,7 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        // Set your target EC2 instance details
+        // Public DNS of your target EC2 instance
         EC2_HOST = "ec2-98-81-222-114.compute-1.amazonaws.com"
         EC2_USER = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
@@ -12,7 +12,7 @@ pipeline {
         stage("Code") {
             steps {
                 echo "Cloning the repository"
-                dir('devops') {
+                dir('devops') {  
                     git branch: 'main', url: 'https://github.com/Harshraj843112/django-notes-app.git'
                 }
             }
@@ -21,7 +21,7 @@ pipeline {
         stage("Build") {
             steps {
                 echo "Building the Docker image"
-                dir('devops') {
+                dir('devops') {  
                     sh "docker build -t $DOCKER_IMAGE ."
                 }
             }
@@ -30,7 +30,7 @@ pipeline {
         stage("Push to DockerHub") {
             steps {
                 echo "Pushing image to Docker Hub"
-                // Use the Docker credentials stored in Jenkins. (ID must match exactly: dockerHubCredentails)
+                // Bind Docker credentials (ID must match exactly as stored)
                 withCredentials([usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
@@ -41,10 +41,9 @@ pipeline {
             }
         }
         
-        stage("Check EC2_KEY") {
+        stage("Check EC2 Key") {
             steps {
                 echo "Checking EC2_KEY variable and file path..."
-                // Bind the SSH private key credential for deployment (ID: ubuntu-ki-key1)
                 withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
                     sh '''
                         echo "EC2_KEY file path: $EC2_KEY"
@@ -58,22 +57,22 @@ pipeline {
         stage("Deploy to EC2") {
             steps {
                 echo "Deploying on EC2 server"
-                // Bind the same SSH credential for deployment
-                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
+                // Bind both the SSH key and Docker credentials so that DOCKER_USER and DOCKER_PASS are available on the remote host
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY'),
+                    usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    // Use a single-line SSH command that exports the Docker variables on the remote host
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" \$EC2_USER@\$EC2_HOST << 'EOF'
-                            echo "Logging in to Docker Hub"
-                            docker login -u "\$DOCKER_USER" -p "\$DOCKER_PASS"
-                            
-                            echo "Pulling the latest image from Docker Hub"
-                            docker pull "\$DOCKER_USER/\$DOCKER_IMAGE"
-                            
-                            echo "Stopping and removing old container (if exists)"
-                            docker rm -f notes-app || true
-                            
-                            echo "Starting new container"
-                            docker run -d -p 8000:8000 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
-                        EOF
+                        ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" \$EC2_USER@\$EC2_HOST "export DOCKER_USER='$DOCKER_USER'; export DOCKER_PASS='$DOCKER_PASS'; export DOCKER_IMAGE='$DOCKER_IMAGE'; \
+                        echo 'Logging in to Docker Hub'; \
+                        docker login -u \$DOCKER_USER -p \$DOCKER_PASS; \
+                        echo 'Pulling the latest image from Docker Hub'; \
+                        docker pull \$DOCKER_USER/\$DOCKER_IMAGE; \
+                        echo 'Stopping and removing old container (if exists)'; \
+                        docker rm -f notes-app || true; \
+                        echo 'Starting new container'; \
+                        docker run -d -p 8000:8000 --name notes-app --restart always \$DOCKER_USER/\$DOCKER_IMAGE"
                     """
                 }
             }
