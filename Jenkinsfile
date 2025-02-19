@@ -62,7 +62,7 @@ pipeline {
                     sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY'),
                     usernamePassword(credentialsId: 'dockerHubCredentails', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
                 ]) {
-                    // Use a single-line SSH command that exports the Docker variables on the remote host
+                     // Use a single-line SSH command that exports the Docker variables on the remote host
                     sh """
                         ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" \$EC2_USER@\$EC2_HOST "export DOCKER_USER='$DOCKER_USER'; export DOCKER_PASS='$DOCKER_PASS'; export DOCKER_IMAGE='$DOCKER_IMAGE'; \
                         echo 'Logging in to Docker Hub'; \
