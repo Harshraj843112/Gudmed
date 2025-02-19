@@ -1,31 +1,31 @@
-# Step 1: Build the React app
 FROM node:21 AS build
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package.json and package--lock.json for better caching
 COPY package*.json ./
 
-# Increase memory limit & clean cache before installing
-RUN npm cache clean --force && NODE_OPTIONS="--max-old-space-size=4096" npm install --legacy-peer-deps
+# Install dependencies using npm install (temporary workaround)
+RUN npm install
 
-# Copy rest of the app
+# Copy the rest of the application files
 COPY . .
 
-# Build the React app
-RUN npm run build
+# Build the React app with increased memory allocation
+RUN npm run build -- --max-old-space-size=4096
 
-# Step 2: Serve the app
+# Step 2: Serve the app using Node.js
 FROM node:21
+
 WORKDIR /app
 
-# Install 'serve' to serve the built React app
+# Install a lightweight static file server (serve)
 RUN npm install -g serve
 
-# Copy built files
+# Copy the built files from the previous stage
 COPY --from=build /app/build /app/build
 
 # Expose port 3000
 EXPOSE 3000
 
-# Start the app
+# Start the app using "serve"
 CMD ["serve", "-s", "build", "-l", "3000"]
