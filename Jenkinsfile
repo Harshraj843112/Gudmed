@@ -12,8 +12,8 @@ pipeline {
         stage("Clone Repository") {
             steps {
                 echo "Cloning the repository..."
-                dir('devops') {  
-                    // Verify that this repository contains your React app and Dockerfile.
+                dir('devops') {
+                    // Ensure this repository contains your React app and the Dockerfile above.
                     git branch: 'main', url: 'https://github.com/Harshraj843112/Gudmed.git'
                 }
             }
@@ -22,9 +22,10 @@ pipeline {
         stage("Build Docker Image") {
             steps {
                 echo "Building Docker image..."
-                dir('devops') {  
+                dir('devops') {
                     sh '''
-                        export DOCKER_BUILDKIT=1
+                        # Disable BuildKit to avoid buildx issues
+                        export DOCKER_BUILDKIT=0
                         docker build --build-arg NODE_OPTIONS="--max-old-space-size=4096" -t ${DOCKER_IMAGE} .
                     '''
                 }
@@ -76,9 +77,10 @@ echo "Stopping and removing old container..."
 docker rm -f notes-app || true
 
 echo "Running new container..."
-docker run -d -p 3000:3000 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
+# Map host port 3000 to container port 80 (since Nginx listens on port 80)
+docker run -d -p 3000:80 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
 EOF
-                    """
+                        """
                 }
             }
         }
