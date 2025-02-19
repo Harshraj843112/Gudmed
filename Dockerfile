@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json for caching
 COPY package*.json ./
 
-# Install dependencies with a clean cache to reduce image size
-RUN npm install --production && npm cache clean --force
+# Install all dependencies (do not use --production so devDependencies are installed)
+RUN npm install && npm cache clean --force
 
 # Copy the rest of the application files
 COPY . .
