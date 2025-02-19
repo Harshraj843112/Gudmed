@@ -14,7 +14,7 @@ pipeline {
                 echo "Cloning the repository..."
                 dir('devops') {  
                     // Verify that this repository contains your React app and Dockerfile.
-                    git branch: 'main', url: 'https://github.com/Harshraj843112/django-notes-app.git'
+                    git branch: 'main', url: 'https://github.com/Harshraj843112/Gudmed.git'
                 }
             }
         }
