@@ -5,8 +5,10 @@ WORKDIR /app
 # Copy package.json and package-lock.json for caching
 COPY package*.json ./
 
-# Install all dependencies (do not use --production so devDependencies are installed)
-RUN npm install && npm cache clean --force
+# Set registry (optional) and install all dependencies with an increased network timeout
+RUN npm config set registry https://registry.npmjs.org/ \
+    && npm install --network-timeout=600000 \
+    && npm cache clean --force
 
 # Copy the rest of the application files
 COPY . .
