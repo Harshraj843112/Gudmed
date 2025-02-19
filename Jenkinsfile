@@ -13,6 +13,7 @@ pipeline {
             steps {
                 echo "Cloning the repository..."
                 dir('devops') {  
+                    // Verify that this repository contains your React app and Dockerfile.
                     git branch: 'main', url: 'https://github.com/Harshraj843112/django-notes-app.git'
                 }
             }
@@ -72,7 +73,7 @@ echo "Stopping and removing old container..."
 docker rm -f notes-app || true
 
 echo "Running new container..."
-docker run -d -p 8000:8000 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
+docker run -d -p 3000:3000 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
 EOF
                     """
                 }
@@ -82,7 +83,7 @@ EOF
 
     post {
         success {
-            echo "Deployment successful! Application is running on http://$EC2_HOST:8000"
+            echo "Deployment successful! Application is running on http://$EC2_HOST:3000"
         }
         failure {
             echo "Deployment failed. Check logs for errors."
