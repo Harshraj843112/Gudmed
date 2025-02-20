@@ -1,14 +1,12 @@
-# -------------------------
-# Stage 1: Build the React App
-# ---------------------------
-FROM node:20 AS build
+# Base image (Lightweight)
+FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copy package files first to leverage Docker cache
+# Copy only necessary files first (Leverage Docker Cache)
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
+# Install dependencies (Use `npm ci` for faster install)
+RUN npm ci --prefer-offline --no-audit
 
 # Copy the rest of the project files
 COPY . .
@@ -16,19 +14,10 @@ COPY . .
 # Build the React app
 RUN npm run build
 
-# -------------------------
-# Stage 2: Serve the App with Nginx
-# -------------------------
+# Serve with Nginx (Optimized for AWS Free Tier)
 FROM nginx:alpine
-
-# Remove default Nginx static content
 RUN rm -rf /usr/share/nginx/html/*
-
-# Copy built React app from previous stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Expose port 80
 EXPOSE 80
-
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
