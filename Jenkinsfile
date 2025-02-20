@@ -1,5 +1,5 @@
 pipeline {
-    agent none  //  No global agent; specify agents at the stage level
+    agent none  // No global agent; specify agents at the stage level
 
     environment {
         EC2_HOST     = "ec2-54.166.222.92.compute-1.amazonaws.com"
