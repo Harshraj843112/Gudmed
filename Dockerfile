@@ -4,31 +4,31 @@
 FROM node:20 AS build
 WORKDIR /app
 
-# Copy only package files first to leverage Docker cache
+# Copy package files first to leverage Docker cache
 COPY package*.json ./
 
-# Install dependencies (using legacy peer deps if needed)
+# Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy the rest of the source code
+# Copy the rest of the project files
 COPY . .
 
-# Build the React app (ensure your package.json has a build script)
+# Build the React app
 RUN npm run build
 
-# ---------------------------
-# Stage 2: Serve with Nginx
-# ---------------------------
-FROM nginx:latest
+# -------------------------
+# Stage 2: Serve the App with Nginx
+# -------------------------
+FROM nginx:alpine
 
-# Remove default Nginx website
+# Remove default Nginx static content
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built files from the build stage to Nginx's html directory
+# Copy built React app from previous stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Expose port 80 to the outside world
+# Expose port 80
 EXPOSE 80
 
-# Start Nginx in the foreground
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
