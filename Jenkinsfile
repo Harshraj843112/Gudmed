@@ -1,15 +1,14 @@
 pipeline {
-    agent none  // No global agent; specify agents at the stage level
+    agent any  // Run everything on the Jenkins controller
 
     environment {
-        EC2_HOST     = "ec2-54.166.222.92.compute-1.amazonaws.com"
+        EC2_HOST     = "34.201.241.156"
         EC2_USER     = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
     }
 
     stages {
         stage("Clone Repository") {
-            agent { label 'built-in' }  // Run this stage on the Jenkins controller
             steps {
                 echo "Cloning the repository..."
                 dir('devops') {
@@ -19,7 +18,6 @@ pipeline {
         }
 
         stage("Build Docker Image") {
-            agent { label 'built-in' }  
             steps {
                 echo "Building Docker image..."
                 dir('devops') {
@@ -32,7 +30,6 @@ pipeline {
         }
 
         stage("Push to Docker Hub") {
-            agent { label 'built-in' }
             steps {
                 echo "Pushing Docker image to Docker Hub..."
                 withCredentials([usernamePassword(credentialsId: 'dockerHubCredentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -46,7 +43,6 @@ pipeline {
         }
 
         stage("Deploy to EC2") {
-            agent { label 'built-in' }
             steps {
                 echo "Deploying the application on EC2..."
                 withCredentials([
