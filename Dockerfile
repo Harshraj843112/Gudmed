@@ -1,38 +1,22 @@
-# ============================
-# 🌟 Stage 1: Build React App
-# ============================
-FROM node:20-alpine AS build
+FROM node:21 AS build
 WORKDIR /app
 
-# Optimize caching by copying only package files first
-COPY package.json package-lock.json ./
+# Copy package.json and package--lock.json for better caching
+COPY package*.json ./
 
-# Set memory limits to prevent crashes
-ENV NODE_OPTIONS="--max-old-space-size=512"
+# Install dependencies using npm install (temporary workaround)
+RUN npm install
 
-# Install dependencies (faster, no audit, offline mode)
-RUN npm ci --prefer-offline --no-audit --no-fund
-
-# Copy the rest of the project files
+# Copy the rest of the application files
 COPY . .
 
-# Build React app (disable CI warnings for AWS Free Tier)
-RUN CI=false npm run build
+# Build the React app with increased memory allocation
+RUN npm run build -- --max-old-space-size=4096
 
-# ============================
-# 🌟 Stage 2: Final Image (Nginx)
-# ============================
-FROM nginx:alpine
-WORKDIR /usr/share/nginx/html
+# Step 2: Serve the app using Node.js
+FROM node:21
 
-# Remove default Nginx static content
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /app
 
-# Copy built React app from previous stage
-COPY --from=build /app/build .
-
-# Expose port 80 for web traffic
-EXPOSE 80
-
-# Start Nginx server
-CMD ["nginx", "-g", "daemon off;"]
+# Install a lightweight static file server (serve)
+RUN npm install -g serve
