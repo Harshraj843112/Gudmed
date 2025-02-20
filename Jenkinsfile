@@ -1,5 +1,6 @@
 pipeline {
     agent any  // Run everything on the Jenkins controller
+
     environment {
         EC2_HOST     = "34.201.241.156"
         EC2_USER     = "ubuntu"
@@ -18,13 +19,11 @@ pipeline {
 
         stage("Build Docker Image") {
             steps {
-                echo "Building Docker image..."
-                dir('devops') {
-                    sh '''
-                        export DOCKER_BUILDKIT=1
-                        docker build --build-arg NODE_OPTIONS="--max-old-space-size=512" -t ${DOCKER_IMAGE} .
-                    '''
-                }
+                echo "Building Docker image on Jenkins machine..."
+                sh '''
+                    export DOCKER_BUILDKIT=1
+                    docker build --build-arg NODE_OPTIONS="--max-old-space-size=512" -t ${DOCKER_IMAGE} .
+                '''
             }
         }
 
@@ -75,10 +74,10 @@ EOF
 
     post {
         success {
-            echo "Deployment successful! Application is running on http://$EC2_HOST:3000"
+            echo "✅ Deployment successful! Application is running on http://$EC2_HOST:3000"
         }
         failure {
-            echo "Deployment failed. Check logs for errors."
+            echo "❌ Deployment failed. Check logs for errors."
         }
     }
 }
