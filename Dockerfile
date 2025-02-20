@@ -19,6 +19,9 @@ COPY . .
 # Build React app (disable CI warnings for AWS Free Tier)
 RUN CI=false npm run build
 
+# Remove unnecessary files to reduce image size
+RUN rm -rf node_modules src public
+
 # ============================
 # 🌟 Stage 2: Final Image (Nginx)
 # ============================
@@ -29,6 +32,17 @@ RUN rm -rf /usr/share/nginx/html/*
 
 # Copy built React app from previous stage
 COPY --from=build /app/build /usr/share/nginx/html
+
+# Optimize Nginx for SPA (Single Page Applications)
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html; \
+        try_files $uri /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
 # Expose port 80 for web traffic
 EXPOSE 80
