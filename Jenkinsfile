@@ -19,7 +19,7 @@ pipeline {
         }
 
         stage("Build Docker Image") {
-            agent { label 'built-in' }  // Run this stage on the Jenkins controller
+            agent { label 'built-in' }  // un this stage on the Jenkins controller
             steps {
                 echo "Building Docker image..."
                 dir('devops') {
