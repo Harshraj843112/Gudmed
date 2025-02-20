@@ -2,8 +2,7 @@ pipeline {
     agent { label "vinod" }
 
     environment {
-        // Public DNS or IP of the EC2 instance
-        EC2_HOST    = "ec2-98-81-222-114.compute-1.amazonaws.com"
+        EC2_HOST    = "ec2-54.166.222.92.compute-1.amazonaws.com"
         EC2_USER    = "ubuntu"
         DOCKER_IMAGE = "notes-app:latest"
     }
@@ -13,7 +12,6 @@ pipeline {
             steps {
                 echo "Cloning the repository..."
                 dir('devops') {  
-                    // Ensure this repository contains your React app and the Dockerfile above.
                     git branch: 'main', url: 'https://github.com/Harshraj843112/Gudmed.git'
                 }
             }
@@ -24,7 +22,6 @@ pipeline {
                 echo "Building Docker image..."
                 dir('devops') {  
                     sh '''
-                        # Disable BuildKit to avoid buildx issues
                         export DOCKER_BUILDKIT=0
                         docker build --build-arg NODE_OPTIONS="--max-old-space-size=4096" -t ${DOCKER_IMAGE} .
                     '''
@@ -40,19 +37,6 @@ pipeline {
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker tag "$DOCKER_IMAGE" "$DOCKER_USER/$DOCKER_IMAGE"
                         docker push "$DOCKER_USER/$DOCKER_IMAGE"
-                    '''
-                }
-            }
-        }
-
-        stage("Check EC2 Key") {
-            steps {
-                echo "Verifying EC2 SSH key..."
-                withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu-ki-key1', keyFileVariable: 'EC2_KEY')]) {
-                    sh '''
-                        echo "EC2_KEY file path: $EC2_KEY"
-                        chmod 600 "$EC2_KEY"
-                        ls -l "$EC2_KEY"
                     '''
                 }
             }
@@ -77,7 +61,6 @@ echo "Stopping and removing old container..."
 docker rm -f notes-app || true
 
 echo "Running new container..."
-# Map host port 3000 to container port 80 (since Nginx listens on port 80)
 docker run -d -p 3000:80 --name notes-app --restart always "\$DOCKER_USER/\$DOCKER_IMAGE"
 EOF
                     """
