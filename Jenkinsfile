@@ -1,5 +1,5 @@
 pipeline {
-    agent any  // Run  everything on the Jenkins controller
+    agent any   // Run  everything on the Jenkins controller
 
     environment {
         EC2_HOST     = "34.201.241.156"
