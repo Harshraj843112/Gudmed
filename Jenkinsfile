@@ -9,7 +9,7 @@ pipeline {
         NODE_OPTIONS = '--max-old-space-size=128'
         NPM_CACHE_DIR = "${env.WORKSPACE}/.npm-cache"
         GIT_CREDENTIALS_ID = 'github-credentials'
-    }
+    } 
     
     stages {
         stage('Checkout') {
