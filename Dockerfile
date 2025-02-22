@@ -1,7 +1,7 @@
 FROM node:21 AS build
 WORKDIR /app
 
-# Copy package.json and package--lock.json for better caching
+# Copy package.json  and package--lock.json for better caching
 COPY package*.json ./
 
 # Install dependencies using npm install (temporary workaround)
