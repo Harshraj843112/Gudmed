@@ -1,83 +1,106 @@
 pipeline {
-    agent any   // Run  everything on the Jenkins controller
-
+    agent any
+    
     environment {
-        EC2_HOST     = "34.201.241.156"
-        EC2_USER     = "ubuntu"
-        DOCKER_IMAGE = "notes-app:latest"
+        DOCKERHUB_CREDENTIALS = credentials('dockerHubCredentials')
+        DOCKER_IMAGE = "harshraj843112/my-react-app"
+        EC2_IP = "3.95.156.64"  // Deployment target
+        DOCKER_IMAGE_TAG = "${DOCKER_IMAGE}:${env.BUILD_NUMBER}"
+        NODE_OPTIONS = '--max-old-space-size=128'
+        NPM_CACHE_DIR = "${env.WORKSPACE}/.npm-cache"
+        GIT_CREDENTIALS_ID = 'github-credentials'
     }
-
+    
     stages {
-        stage("Clone Repository") {
+        stage('Checkout') {
             steps {
-                echo "Cloning the repository..."
-                dir('devops') {
-                    git branch: 'main', url: 'https://github.com/Harshraj843112/Gudmed.git'
-                }
+                git branch: 'main', 
+                    url: 'https://github.com/Harshraj843112/practice-ci-cd.git', 
+                    credentialsId: 'github-credentials'
             }
         }
-
-        stage("Build Docker Image") {
+        
+        stage('Setup Environment') {
             steps {
-                echo "Building Docker image on Jenkins machine..."
-                sh '''
-                    export DOCKER_BUILDKIT=1
-                    docker build --build-arg NODE_OPTIONS="--max-old-space-size=512" -t ${DOCKER_IMAGE} .
+                sh '''#!/bin/bash
+                    rm -rf ${NPM_CACHE_DIR} node_modules package-lock.json build || true
+                    npm cache clean --force
+                    npm config set registry https://registry.npmjs.org/
+                    git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+                    mkdir -p ${NPM_CACHE_DIR}
+                    chmod -R 777 ${NPM_CACHE_DIR}
                 '''
             }
         }
-
-        stage("Push to Docker Hub") {
+        
+        stage('Build React App') {
             steps {
-                echo "Pushing Docker image to Docker Hub..."
-                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                sh '''#!/bin/bash
+                    export npm_config_cache=${NPM_CACHE_DIR}
+                    export NODE_OPTIONS=--max-old-space-size=128
+                    npm install --registry https://registry.npmjs.org/ --no-audit --no-fund --omit=dev --verbose
+                    npm run build
+                    ls -la  # Verify build directory exists
+                '''
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker --version'
+                sh "docker build -t ${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE}:latest ."
+            }
+        }
+        
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerHubCredentials', 
+                    usernameVariable: 'DOCKER_USERNAME', 
+                    passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin || exit 1
-                        docker tag "$DOCKER_IMAGE" "$DOCKER_USER/$DOCKER_IMAGE"
-                        docker push "$DOCKER_USER/$DOCKER_IMAGE"
+                        echo "Using DockerHub username: $DOCKER_USERNAME"
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        docker push "${DOCKER_IMAGE_TAG}"
+                        docker push "${DOCKER_IMAGE}:latest"
                     '''
                 }
             }
         }
-
-        stage("Deploy to EC2") {
+        
+        stage('Deploy to EC2') {
             steps {
-                echo "Deploying the application on EC2..."
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'ubuntu-ki-key8', keyFileVariable: 'EC2_KEY'),
-                    usernamePassword(credentialsId: 'dockerHubCredentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-                ]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no -i "$EC2_KEY" $EC2_USER@$EC2_HOST <<EOF
-echo "Cleaning up old Docker images..."
-docker system prune -f
-
-echo "Logging into Docker Hub..."
-echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin || exit 1
-
-echo "Pulling the latest image..."
-docker pull "$DOCKER_USER/$DOCKER_IMAGE" || exit 1
-
-echo "Stopping and removing old container..."
-docker rm -f notes-app || true
-
-echo "Running new container..."
-docker run -d -p 3000:80 --name notes-app --restart always "$DOCKER_USER/$DOCKER_IMAGE"
-
-echo "Deployment completed successfully!"
-EOF
-                    '''
+                sshagent(['ec2-ssh-credentials']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@${EC2_IP} << 'EOF'
+                            if ! docker ps >/dev/null 2>&1; then
+                                sudo systemctl start docker || true
+                            fi
+                            docker stop my-react-app || true
+                            docker rm my-react-app || true
+                            docker pull ${DOCKER_IMAGE_TAG}
+                            docker run -d --name my-react-app -p 80:80 ${DOCKER_IMAGE_TAG}
+                            docker image prune -f
+                        EOF
+                    """
                 }
             }
         }
     }
-
+    
     post {
+        always {
+            sh '''
+                docker logout || true
+                docker system prune -f || true
+                rm -rf node_modules build ${NPM_CACHE_DIR} || true
+            '''
+            cleanWs()
+        }
         success {
-            echo "✅ Deployment successful! Application is running on http://$EC2_HOST:3000"
+            echo "Build ${env.BUILD_NUMBER} deployed successfully!"
         }
         failure {
-            echo "❌ Deployment failed. Check logs for errors."
+            echo "Build ${env.BUILD_NUMBER} failed—check logs and resources!"
         }
     }
 }
